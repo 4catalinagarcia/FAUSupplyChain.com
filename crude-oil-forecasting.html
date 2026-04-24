@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-C2SC43ESFY"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-C2SC43ESFY');
+  </script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="icon" href="assets/images/FAULogo.png" />
+  <title>Crude Oil Price Forecasting — FAU / IMI SCM Case Study</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            navy: {
+              50:'#f0f4ff',100:'#dce6ff',200:'#b9ccff',300:'#7fa3ff',
+              400:'#4d7bff',600:'#0040ff',700:'#0033cc',800:'#1e3a8a',900:'#1e2d5e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; }
+    .fade-up { animation: fadeUp .5s ease both; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:none} }
+    .card-hover { transition: transform .2s, box-shadow .2s; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,.15); }
+    .section-label { display:inline-block; font-size:.7rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:#dc2626; margin-bottom:.75rem; }
+    .tab-btn { background:#e2e8f0; color:#374151; border-radius:.5rem; padding:.5rem 1.25rem; font-size:.85rem; font-weight:600; cursor:pointer; transition:background .2s; }
+    .tab-btn.active { background:#1e2d5e; color:#fff; }
+    .tab-btn:hover:not(.active) { background:#cbd5e1; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+    .best-row { background:#fef9c3; font-weight:700; }
+    .eq-box { background:#fef9c3; border-left:4px solid #eab308; padding:1rem 1.25rem; border-radius:.5rem; font-family:monospace; font-size:.9rem; line-height:1.6; }
+    .scenario-card { border-left:4px solid; }
+  </style>
+</head>
+<body class="bg-gray-50">
+
+<!-- Password Protection -->
+<div id="password-overlay" style="position:fixed;inset:0;background:#f9fafb;display:flex;align-items:center;justify-content:center;z-index:9999;">
+  <div style="background:white;padding:2.5rem;border-radius:1rem;box-shadow:0 10px 40px rgba(0,0,0,0.12);width:100%;max-width:360px;text-align:center;">
+    <h2 style="font-size:1.25rem;font-weight:700;color:#111827;margin-bottom:0.5rem;">Protected Page</h2>
+    <p style="font-size:0.875rem;color:#6b7280;margin-bottom:1.5rem;">Enter the password to continue.</p>
+    <input id="password-input" type="password" placeholder="Password" style="width:100%;padding:0.625rem 0.75rem;border:1px solid #d1d5db;border-radius:0.5rem;font-size:1rem;outline:none;box-sizing:border-box;margin-bottom:0.75rem;" />
+    <div id="password-error" style="color:#ef4444;font-size:0.8rem;margin-bottom:0.75rem;display:none;">Incorrect password. Try again.</div>
+    <button onclick="checkPassword()" style="width:100%;padding:0.625rem;background:#111827;color:white;border:none;border-radius:0.5rem;font-size:1rem;font-weight:600;cursor:pointer;">Enter</button>
+  </div>
+</div>
+<script>
+  (function() {
+    if (localStorage.getItem('imi_auth') === 'true') {
+      document.getElementById('password-overlay').style.display = 'none';
+    }
+  })();
+  function checkPassword() {
+    var input = document.getElementById('password-input').value;
+    if (input === 'IMI2026') {
+      localStorage.setItem('imi_auth', 'true');
+      document.getElementById('password-overlay').style.display = 'none';
+    } else {
+      document.getElementById('password-error').style.display = 'block';
+      document.getElementById('password-input').value = '';
+    }
+  }
+  document.getElementById('password-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') checkPassword();
+  });
+</script>
+
+<!-- ══════════════════════════════════
+     STICKY HEADER
+══════════════════════════════════ -->
+<header class="sticky top-0 z-50 bg-[#1e2d5e] text-white shadow-xl relative">
+  <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+    <div class="flex items-center gap-4 flex-shrink-0">
+      <a href="https://fausupplychain.com" target="_blank" rel="noopener noreferrer"><img src="assets/images/FAULogo.png" alt="Florida Atlantic University" class="h-12 w-auto object-contain" /></a>
+      <div class="hidden sm:block">
+        <div class="text-sm font-bold tracking-wide leading-tight">2026 FAU / IMI</div>
+        <div class="text-xs text-blue-200 leading-tight">SCM Case Study Competition</div>
+      </div>
+      <a href="https://imigroup.com/" target="_blank" rel="noopener noreferrer"><img src="assets/images/IMI Logo.jpg" alt="International Materials" class="h-10 w-auto object-contain bg-white rounded px-2 py-1" /></a>
+    </div>
+    <div class="flex items-center gap-3 flex-shrink-0">
+      <button onclick="document.getElementById('mobile-menu-cf').classList.toggle('hidden')" class="flex flex-col justify-center gap-1.5 p-2 rounded focus:outline-none" aria-label="Toggle menu">
+        <span class="block w-6 h-0.5 bg-white"></span>
+        <span class="block w-6 h-0.5 bg-white"></span>
+        <span class="block w-6 h-0.5 bg-white"></span>
+      </button>
+    </div>
+  </div>
+  <div id="mobile-menu-cf" class="hidden absolute top-full left-0 right-0 bg-[#1e2d5e] border-t border-white/10 shadow-xl z-50">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex flex-col">
+      <a href="casestudy.html" class="text-white font-semibold text-sm py-3 border-b border-white/10 hover:text-blue-200 transition-colors">Competition Home</a>
+      <a href="reference.html" class="text-white font-semibold text-sm py-3 border-b border-white/10 hover:text-blue-200 transition-colors">Optimization Reference Guide</a>
+      <a href="optimization.html" class="text-white font-semibold text-sm py-3 border-b border-white/10 hover:text-blue-200 transition-colors">Optimization Dashboard</a>
+      <a href="scenarios.html" class="text-white font-semibold text-sm py-3 border-b border-white/10 hover:text-blue-200 transition-colors">Optimization Scenarios</a>
+      <a href="forecasting.html" class="text-white font-semibold text-sm py-3 border-b border-white/10 hover:text-blue-200 transition-colors">Forecasting Dashboards</a>
+      <a href="crude-oil-forecasting.html" class="text-white font-semibold text-sm py-3 hover:text-blue-200 transition-colors">Crude Oil Price Forecasting</a>
+    </div>
+  </div>
+</header>
+
+<!-- ══════════════════════════════════
+     HERO
+══════════════════════════════════ -->
+<section class="bg-gradient-to-br from-[#0f1e42] via-[#1e2d5e] to-[#243870] text-white py-20 px-6 relative overflow-hidden">
+  <div class="absolute inset-0 pointer-events-none opacity-10">
+    <div class="absolute top-[-80px] left-[-80px] w-96 h-96 rounded-full border-2 border-white"></div>
+    <div class="absolute bottom-[-60px] right-[-60px] w-72 h-72 rounded-full border-2 border-white"></div>
+  </div>
+  <div class="max-w-5xl mx-auto text-center relative fade-up">
+    <span class="inline-block bg-red-600 text-white text-xs font-bold px-4 py-1.5 rounded-full mb-6 uppercase tracking-widest">
+      Price Forecasting
+    </span>
+    <h1 class="text-4xl md:text-5xl font-extrabold mb-4 leading-tight">
+      Crude Oil Price Forecasting<br/>Brent &amp; VLSFO Analysis
+    </h1>
+    <p class="text-blue-200 text-xl font-semibold mb-4 tracking-wide uppercase">
+      Time-Series · Causal Modeling · Scenario Analysis
+    </p>
+    <p class="text-blue-100 text-lg max-w-3xl mx-auto leading-relaxed">
+      This study analyzes crude oil pricing dynamics using both time-series forecasting and causal
+      modeling to understand key drivers of price movements and generate reliable forecasts
+      for Brent crude and VLSFO under different market conditions.
+    </p>
+    <div class="flex flex-wrap justify-center gap-4 mt-10">
+      <div class="bg-white/10 backdrop-blur rounded-xl px-6 py-4 min-w-[110px]">
+        <div class="text-3xl font-extrabold">2</div>
+        <div class="text-blue-200 text-sm mt-1">Commodities</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur rounded-xl px-6 py-4 min-w-[110px]">
+        <div class="text-3xl font-extrabold">7</div>
+        <div class="text-blue-200 text-sm mt-1">Models Tested</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur rounded-xl px-6 py-4 min-w-[110px]">
+        <div class="text-3xl font-extrabold">5</div>
+        <div class="text-blue-200 text-sm mt-1">Scenarios</div>
+      </div>
+      <div class="bg-white/10 backdrop-blur rounded-xl px-6 py-4 min-w-[130px]">
+        <div class="text-3xl font-extrabold">60%</div>
+        <div class="text-blue-200 text-sm mt-1">R² (Brent Full Model)</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     OVERVIEW
+══════════════════════════════════ -->
+<section class="py-16 px-6 bg-white">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <span class="section-label">1. Overview</span>
+      <h2 class="text-3xl font-extrabold text-[#1e2d5e] mb-3">Study Overview</h2>
+      <p class="text-gray-500 text-lg max-w-2xl mx-auto">Key findings across time-series, causal, and scenario analyses.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-[#1e2d5e]">
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-3">Time-Series Analysis</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          Both Brent and VLSFO prices are primarily driven by <strong>trend dynamics</strong> rather than seasonal
+          patterns. <strong>Holt's Trend model</strong> performs best for Brent, while <strong>Moving Average</strong>
+          performs best for VLSFO by error metrics.
+        </p>
+      </div>
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-red-600">
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-3">Causal Modeling</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          <strong>Industrial production</strong> and <strong>geopolitical risk</strong> are the most significant
+          drivers across both markets. Inventory changes consistently reduce prices. Brent is more sensitive
+          to macro-financial variables (USD Index), while VLSFO is more influenced by demand and freight factors.
+        </p>
+      </div>
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-[#2563eb]">
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-3">Scenario Analysis</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          Demand shocks create the <strong>largest price movements</strong>. Combined shocks confirm that
+          demand dominates even in crisis conditions. VLSFO exhibits significantly larger responses
+          than Brent across all scenarios.
+        </p>
+      </div>
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-yellow-500">
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-3">6-Month Outlook</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          Both Brent and VLSFO forecasts indicate a <strong>gradual downward trend</strong> through mid-2026.
+          Brent is forecast to decline from ~$64 to ~$61, while VLSFO is forecast to decline
+          from ~$390 to ~$382 (Holt Trend model).
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     TIME-SERIES ANALYSIS
+══════════════════════════════════ -->
+<section class="py-16 px-6 bg-gray-50">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <span class="section-label">2. Time-Series Analysis</span>
+      <h2 class="text-3xl font-extrabold text-[#1e2d5e] mb-3">Price Trends &amp; Forecasting Models</h2>
+      <p class="text-gray-500 text-lg max-w-2xl mx-auto">
+        Train/test split: July 2018–December 2024 (training) · January 2025–January 2026 (testing).
+        Models evaluated on RMSE and MAE.
+      </p>
+    </div>
+
+    <!-- Tab switcher -->
+    <div class="flex gap-3 mb-8 flex-wrap">
+      <button class="tab-btn active" onclick="switchTab('brent', this, 'ts-group')">Brent Crude Oil</button>
+      <button class="tab-btn" onclick="switchTab('vlsfo', this, 'ts-group')">VLSFO Fuel</button>
+    </div>
+
+    <!-- BRENT tab -->
+    <div id="tab-brent" class="tab-panel active" data-group="ts-group">
+
+      <!-- Price chart -->
+      <div class="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-4">Brent Crude Oil — Historical Price (Jul 2018 – Jan 2026)</h3>
+        <canvas id="brentChart" height="120"></canvas>
+        <p class="text-gray-500 text-sm mt-3">
+          Brent exhibits strong trend behavior with significant volatility during 2020 (COVID collapse) and 2022 (Ukraine war spike to ~$120).
+          No consistent seasonal pattern is present. The series is <strong>non-stationary</strong> in levels but becomes stationary after first differencing.
+        </p>
+      </div>
+
+      <!-- Stationarity -->
+      <div class="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-4">2.2 Stationarity Analysis — Augmented Dickey-Fuller (ADF) Test</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-red-50 rounded-xl p-4 border border-red-200">
+            <div class="font-semibold text-red-700 mb-1">Levels (Original)</div>
+            <div class="text-sm text-gray-600">ADF Statistic: <strong>−2.0444</strong></div>
+            <div class="text-sm text-gray-600">p-value: <strong>0.2675</strong></div>
+            <div class="mt-2 inline-block bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">Non-Stationary</div>
+          </div>
+          <div class="bg-green-50 rounded-xl p-4 border border-green-200">
+            <div class="font-semibold text-green-700 mb-1">After First Differencing</div>
+            <div class="text-sm text-gray-600">ADF Statistic: <strong>−7.5967</strong></div>
+            <div class="text-sm text-gray-600">p-value: <strong>2.46 × 10⁻¹¹</strong></div>
+            <div class="mt-2 inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">Stationary</div>
+          </div>
+        </div>
+        <p class="text-gray-500 text-sm mt-4">Price movements are primarily driven by evolving market conditions rather than stable long-term averages, indicating underlying trend persistence.</p>
+      </div>
+
+      <!-- Model comparison table -->
+      <div class="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-4">2.4 Model Comparison — Brent Crude Oil</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-[#1e2d5e] text-white">
+                <th class="text-left px-4 py-3 rounded-tl-lg">Model</th>
+                <th class="px-4 py-3 text-center">RMSE</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">MAE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="best-row">
+                <td class="px-4 py-3 border-b border-gray-100">Holt Trend ⭐ Best</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">2.9897</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">2.4189</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">Moving Average</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">4.0832</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">3.4611</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">SES</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">6.9886</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">6.1682</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">SARIMA</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">7.1992</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">6.3623</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">ARIMA</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">7.1992</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">6.3623</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">HW Seasonal</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">10.9149</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">10.2594</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3">HW Trend+Seasonal</td>
+                <td class="px-4 py-3 text-center">11.4528</td>
+                <td class="px-4 py-3 text-center">10.7576</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- 6-month forecast table -->
+      <div class="bg-white rounded-2xl shadow-md p-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-2">2.5 Brent Forecast — Holt Trend Model (Feb–Jul 2026)</h3>
+        <p class="text-gray-500 text-sm mb-4">Gradual downward trend reflecting recent price softening. Both commodities show similar directional trends.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm max-w-md">
+            <thead>
+              <tr class="bg-[#1e2d5e] text-white">
+                <th class="text-left px-4 py-3 rounded-tl-lg">Date</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">Forecast (USD/bbl)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-02-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$64.23</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-03-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$63.49</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-04-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$62.76</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-05-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$62.03</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-06-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$61.30</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3">2026-07-01</td><td class="px-4 py-3 text-center font-semibold">$60.57</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- VLSFO tab -->
+    <div id="tab-vlsfo" class="tab-panel" data-group="ts-group">
+
+      <div class="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-4">VLSFO Fuel — Historical Price (Jul 2018 – Jan 2026)</h3>
+        <canvas id="vlsfoChart" height="120"></canvas>
+        <p class="text-gray-500 text-sm mt-3">
+          VLSFO shows larger fluctuations in magnitude compared to Brent, indicating higher sensitivity to market shocks.
+          The 2022 spike reached ~$830/MT. No consistent seasonal pattern is present. The series is <strong>non-stationary</strong> in levels
+          but becomes stationary after first differencing.
+        </p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-4">2.2 Stationarity Analysis — Augmented Dickey-Fuller (ADF) Test</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-red-50 rounded-xl p-4 border border-red-200">
+            <div class="font-semibold text-red-700 mb-1">Levels (Original)</div>
+            <div class="text-sm text-gray-600">ADF Statistic: <strong>−2.3574</strong></div>
+            <div class="text-sm text-gray-600">p-value: <strong>0.1541</strong></div>
+            <div class="mt-2 inline-block bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full">Non-Stationary</div>
+          </div>
+          <div class="bg-green-50 rounded-xl p-4 border border-green-200">
+            <div class="font-semibold text-green-700 mb-1">After First Differencing</div>
+            <div class="text-sm text-gray-600">ADF Statistic: <strong>−7.1002</strong></div>
+            <div class="text-sm text-gray-600">p-value: <strong>4.19 × 10⁻¹⁰</strong></div>
+            <div class="mt-2 inline-block bg-green-100 text-green-700 text-xs font-bold px-3 py-1 rounded-full">Stationary</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-6 mb-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-4">2.4 Model Comparison — VLSFO Fuel Prices</h3>
+        <div class="bg-blue-50 rounded-xl p-4 mb-4 text-sm text-blue-800">
+          <strong>Note:</strong> Although Moving Average achieved the lowest error, it does not capture trend behavior.
+          Therefore, the <strong>Holt Trend model</strong> was used for final forecasting to incorporate underlying price dynamics.
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-[#1e2d5e] text-white">
+                <th class="text-left px-4 py-3 rounded-tl-lg">Model</th>
+                <th class="px-4 py-3 text-center">RMSE</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">MAE</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="best-row">
+                <td class="px-4 py-3 border-b border-gray-100">Moving Average ⭐ Best (accuracy)</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">32.5401</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">28.2309</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">Holt Trend <span class="text-blue-600 font-semibold">(Final Forecast Used)</span></td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">58.6174</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">49.9511</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">SES</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">72.0187</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">61.9386</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">SARIMA</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">78.8284</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">68.8409</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">ARIMA</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">78.8284</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">68.8409</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3 border-b border-gray-100">HW Seasonal</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">95.1496</td>
+                <td class="px-4 py-3 border-b border-gray-100 text-center">88.6001</td>
+              </tr>
+              <tr class="hover:bg-gray-50">
+                <td class="px-4 py-3">HW Trend+Seasonal</td>
+                <td class="px-4 py-3 text-center">96.2378</td>
+                <td class="px-4 py-3 text-center">89.5946</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-6">
+        <h3 class="font-bold text-[#1e2d5e] mb-2">2.5 VLSFO Forecast — Holt Trend Model (Feb–Jul 2026)</h3>
+        <p class="text-gray-500 text-sm mb-4">VLSFO exhibits larger absolute price changes than Brent, reinforcing its higher sensitivity to market conditions.</p>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm max-w-md">
+            <thead>
+              <tr class="bg-[#1e2d5e] text-white">
+                <th class="text-left px-4 py-3 rounded-tl-lg">Date</th>
+                <th class="px-4 py-3 text-center rounded-tr-lg">Forecast (USD/MT)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-02-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$390.42</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-03-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$388.64</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-04-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$386.87</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-05-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$385.09</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100">2026-06-01</td><td class="px-4 py-3 border-b border-gray-100 text-center font-semibold">$383.31</td></tr>
+              <tr class="hover:bg-gray-50"><td class="px-4 py-3">2026-07-01</td><td class="px-4 py-3 text-center font-semibold">$381.54</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Key insight box -->
+    <div class="mt-8 bg-[#1e2d5e] text-white rounded-2xl p-6">
+      <h3 class="font-bold text-base mb-3">2.6 Key Time-Series Insights</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-100">
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p>Crude prices are <strong class="text-white">primarily trend-driven</strong>, not seasonal. Seasonal models performed poorly for both commodities.</p></div>
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p>ARIMA and SARIMA did <strong class="text-white">not outperform simpler models</strong>, suggesting complex autoregressive structures provide little additional value here.</p></div>
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p>VLSFO demonstrates <strong class="text-white">more short-term variability</strong>, making it more responsive to recent price movements than Brent's smoother trend dynamics.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     CAUSAL MODELING
+══════════════════════════════════ -->
+<section class="py-16 px-6 bg-white">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <span class="section-label">3. Causal Modeling</span>
+      <h2 class="text-3xl font-extrabold text-[#1e2d5e] mb-3">What Drives Crude Oil Prices?</h2>
+      <p class="text-gray-500 text-lg max-w-2xl mx-auto">
+        Multiple linear regression with lagged independent variables to quantify the impact of
+        macroeconomic, supply, and freight/risk factors on Brent and VLSFO prices.
+      </p>
+    </div>
+
+    <!-- 3.1 Correlation Analysis -->
+    <div class="mb-10">
+      <h3 class="text-xl font-bold text-[#1e2d5e] mb-6">3.1 Correlation Analysis</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <h4 class="font-bold text-[#1e2d5e] mb-4">Brent Crude Oil</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Geopolitical Risk</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-red-500 h-2.5 rounded-full" style="width:56%"></div></div>
+                <span class="text-sm font-bold text-red-600">+0.56</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Industrial Production</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width:44%"></div></div>
+                <span class="text-sm font-bold text-blue-600">+0.44</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Baltic Dry Index</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-blue-400 h-2.5 rounded-full" style="width:31%"></div></div>
+                <span class="text-sm font-bold text-blue-600">+0.31</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Inventory Change</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-orange-400 h-2.5 rounded-full" style="width:38%"></div></div>
+                <span class="text-sm font-bold text-orange-600">−0.38</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <h4 class="font-bold text-[#1e2d5e] mb-4">VLSFO Fuel Prices</h4>
+          <div class="space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Geopolitical Risk</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-red-500 h-2.5 rounded-full" style="width:52%"></div></div>
+                <span class="text-sm font-bold text-red-600">+0.52</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Industrial Production</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-blue-500 h-2.5 rounded-full" style="width:49%"></div></div>
+                <span class="text-sm font-bold text-blue-600">+0.49</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Baltic Dry Index</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-blue-400 h-2.5 rounded-full" style="width:30%"></div></div>
+                <span class="text-sm font-bold text-blue-600">+0.30</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">Inventory Change</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-orange-400 h-2.5 rounded-full" style="width:39%"></div></div>
+                <span class="text-sm font-bold text-orange-600">−0.39</span>
+              </div>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-sm text-gray-700">USD Index</span>
+              <div class="flex items-center gap-2">
+                <div class="w-32 bg-gray-200 rounded-full h-2.5"><div class="bg-gray-300 h-2.5 rounded-full" style="width:1%"></div></div>
+                <span class="text-sm font-bold text-gray-500">0.00</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 bg-blue-50 rounded-xl p-4 text-sm text-blue-800">
+        <strong>Key difference:</strong> Brent shows a noticeable positive relationship with the USD Index (financial sensitivity), while VLSFO shows minimal correlation — indicating VLSFO is more directly linked to real economic activity and physical demand.
+      </div>
+    </div>
+
+    <!-- 3.2 Model Segmentation -->
+    <div class="mb-10">
+      <h3 class="text-xl font-bold text-[#1e2d5e] mb-6">3.2 Model Segmentation — R² Comparison</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <h4 class="font-bold text-[#1e2d5e] mb-4">Brent Crude Oil</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-[#1e2d5e] text-white"><th class="text-left px-3 py-2 rounded-tl-lg">Model</th><th class="px-3 py-2 text-center">R²</th><th class="px-3 py-2 text-center rounded-tr-lg">Adj. R²</th></tr></thead>
+              <tbody>
+                <tr class="best-row"><td class="px-3 py-2 border-b border-gray-100">Full Model ⭐</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.602</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.568</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Freight/Risk Model</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.431</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.412</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Macro Model</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.231</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.214</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2">Supply Model</td><td class="px-3 py-2 text-center">0.177</td><td class="px-3 py-2 text-center">0.159</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <h4 class="font-bold text-[#1e2d5e] mb-4">VLSFO Fuel Prices</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-[#1e2d5e] text-white"><th class="text-left px-3 py-2 rounded-tl-lg">Model</th><th class="px-3 py-2 text-center">R²</th><th class="px-3 py-2 text-center rounded-tr-lg">Adj. R²</th></tr></thead>
+              <tbody>
+                <tr class="best-row"><td class="px-3 py-2 border-b border-gray-100">Full Model ⭐</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.573</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.537</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Freight/Risk Model</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.391</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.370</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Macro Model</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.249</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.232</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2">Supply Model</td><td class="px-3 py-2 text-center">0.157</td><td class="px-3 py-2 text-center">0.138</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.4 Regression Equations -->
+    <div class="mb-10">
+      <h3 class="text-xl font-bold text-[#1e2d5e] mb-6">3.4 Full Model Regression Equations</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <div class="font-semibold text-[#1e2d5e] mb-2">Brent Crude Oil (R² = 60.2%)</div>
+          <div class="eq-box">
+            Brent = −219.32 + 1.77(USD) + 1.62(IndProd)<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− 0.0085(DomProd) − 0.0002(Inventory)<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.0045(BDI) − 0.46(VIX) + 0.21(GeoRisk)
+          </div>
+        </div>
+        <div>
+          <div class="font-semibold text-[#1e2d5e] mb-2">VLSFO Fuel Prices (R² = 57.3%)</div>
+          <div class="eq-box">
+            VLSFO = −1056.05 + 6.77(USD) + 12.36(IndProd)<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;− 0.0517(DomProd) − 0.0009(Inventory)<br/>
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ 0.0216(BDI) − 2.56(VIX) + 1.36(GeoRisk)
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.4 Coefficient table -->
+    <div class="mb-10">
+      <h3 class="text-xl font-bold text-[#1e2d5e] mb-6">3.4 Coefficient Interpretation</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <h4 class="font-bold text-[#1e2d5e] mb-3">Brent Crude Oil</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-[#1e2d5e] text-white"><th class="text-left px-3 py-2 rounded-tl-lg">Variable</th><th class="px-3 py-2 text-center">Coeff.</th><th class="px-3 py-2 text-center rounded-tr-lg">p-value</th></tr></thead>
+              <tbody>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">USD Index</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+1.774</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0003</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Industrial Production</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+1.615</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0024</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Baltic Dry Index</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+0.005</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0082</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Geopolitical Risk</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+0.210</td><td class="px-3 py-2 border-b border-gray-100 text-center">&lt; 0.0001</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Dom. Crude Production</td><td class="px-3 py-2 border-b border-gray-100 text-center text-red-600 font-semibold">−0.009</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0003</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">CBOE Volatility (VIX)</td><td class="px-3 py-2 border-b border-gray-100 text-center text-red-600 font-semibold">−0.461</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0439</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2">Inventory Change</td><td class="px-3 py-2 text-center text-red-600 font-semibold">−0.0002</td><td class="px-3 py-2 text-center">0.0792</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bg-gray-50 rounded-2xl p-6">
+          <h4 class="font-bold text-[#1e2d5e] mb-3">VLSFO Fuel Prices</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead><tr class="bg-[#1e2d5e] text-white"><th class="text-left px-3 py-2 rounded-tl-lg">Variable</th><th class="px-3 py-2 text-center">Coeff.</th><th class="px-3 py-2 text-center rounded-tr-lg">p-value</th></tr></thead>
+              <tbody>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Industrial Production</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+12.355</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0005</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Geopolitical Risk</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+1.360</td><td class="px-3 py-2 border-b border-gray-100 text-center">&lt; 0.0001</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Baltic Dry Index</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+0.022</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0544</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">USD Index</td><td class="px-3 py-2 border-b border-gray-100 text-center text-green-700 font-semibold">+6.769</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0331</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">Dom. Crude Production</td><td class="px-3 py-2 border-b border-gray-100 text-center text-red-600 font-semibold">−0.052</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0009</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2 border-b border-gray-100">CBOE Volatility (VIX)</td><td class="px-3 py-2 border-b border-gray-100 text-center text-red-600 font-semibold">−2.560</td><td class="px-3 py-2 border-b border-gray-100 text-center">0.0907</td></tr>
+                <tr class="hover:bg-white"><td class="px-3 py-2">Inventory Change</td><td class="px-3 py-2 text-center text-red-600 font-semibold">−0.0009</td><td class="px-3 py-2 text-center">0.1304</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3.6 Insight -->
+    <div class="bg-[#1e2d5e] text-white rounded-2xl p-6">
+      <h3 class="font-bold text-base mb-4">3.6 Key Causal Model Insights</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-100">
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p><strong class="text-white">Demand &amp; risk dominate:</strong> Industrial production and geopolitical risk are consistently the strongest positive drivers across both markets.</p></div>
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p><strong class="text-white">Supply stabilizes:</strong> Inventory change consistently reduces prices — acting as a balancing mechanism between supply and demand.</p></div>
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p><strong class="text-white">Structural difference:</strong> Brent reflects macro-financial conditions (USD, VIX), while VLSFO behaves more like a logistics-sensitive fuel market driven by physical demand and freight.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     SCENARIO ANALYSIS
+══════════════════════════════════ -->
+<section class="py-16 px-6 bg-gray-50">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <span class="section-label">4. What-If Scenario Analysis</span>
+      <h2 class="text-3xl font-extrabold text-[#1e2d5e] mb-3">Price Sensitivity Under Market Shocks</h2>
+      <p class="text-gray-500 text-lg max-w-2xl mx-auto">
+        Simulating how crude prices respond to changes in demand, freight activity, and geopolitical risk.
+        All impacts represent average price change from the baseline.
+      </p>
+    </div>
+
+    <!-- Summary table -->
+    <div class="bg-white rounded-2xl shadow-md p-6 mb-8">
+      <h3 class="font-bold text-[#1e2d5e] mb-4">4.2 Summary — All Scenarios</h3>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="bg-[#1e2d5e] text-white">
+              <th class="text-left px-4 py-3 rounded-tl-lg">Scenario</th>
+              <th class="px-4 py-3 text-center">Shock Applied</th>
+              <th class="px-4 py-3 text-center">Brent Avg Impact</th>
+              <th class="px-4 py-3 text-center rounded-tr-lg">VLSFO Avg Impact</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100 font-semibold">Geopolitical Shock</td><td class="px-4 py-3 border-b border-gray-100 text-center text-gray-500 text-xs">+30% GeoRisk</td><td class="px-4 py-3 border-b border-gray-100 text-center text-green-700 font-bold">+$7.19</td><td class="px-4 py-3 border-b border-gray-100 text-center text-green-700 font-bold">+$46.48</td></tr>
+            <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100 font-semibold">Demand Boom</td><td class="px-4 py-3 border-b border-gray-100 text-center text-gray-500 text-xs">+15% IndProd</td><td class="px-4 py-3 border-b border-gray-100 text-center text-green-700 font-bold">+$24.30</td><td class="px-4 py-3 border-b border-gray-100 text-center text-green-700 font-bold">+$185.84</td></tr>
+            <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100 font-semibold">Demand Crash</td><td class="px-4 py-3 border-b border-gray-100 text-center text-gray-500 text-xs">−15% IndProd</td><td class="px-4 py-3 border-b border-gray-100 text-center text-red-600 font-bold">−$24.30</td><td class="px-4 py-3 border-b border-gray-100 text-center text-red-600 font-bold">−$185.84</td></tr>
+            <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100 font-semibold">Freight Shock</td><td class="px-4 py-3 border-b border-gray-100 text-center text-gray-500 text-xs">+25% BDI</td><td class="px-4 py-3 border-b border-gray-100 text-center text-green-700 font-bold">+$1.92</td><td class="px-4 py-3 border-b border-gray-100 text-center text-green-700 font-bold">+$9.18</td></tr>
+            <tr class="hover:bg-gray-50"><td class="px-4 py-3 border-b border-gray-100 font-semibold">Combined Crisis</td><td class="px-4 py-3 border-b border-gray-100 text-center text-gray-500 text-xs">+30% GeoRisk, +25% BDI, −15% IndProd</td><td class="px-4 py-3 border-b border-gray-100 text-center text-red-600 font-bold">−$15.19</td><td class="px-4 py-3 border-b border-gray-100 text-center text-red-600 font-bold">−$130.18</td></tr>
+            <tr class="best-row"><td class="px-4 py-3 font-semibold">Demand-Freight Mismatch ⭐ Largest Impact</td><td class="px-4 py-3 text-center text-gray-500 text-xs">+15% IndProd, +25% BDI</td><td class="px-4 py-3 text-center text-green-700">+$26.22</td><td class="px-4 py-3 text-center text-green-700">+$195.02</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Scenario cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <div class="scenario-card bg-white rounded-2xl shadow-md p-6 border-red-500">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="bg-red-100 text-red-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Demand Shock</span>
+        </div>
+        <h4 class="font-bold text-[#1e2d5e] mb-2">A. Demand Boom / Crash</h4>
+        <p class="text-gray-600 text-sm mb-3">Industrial production changed ±15%, representing economic expansion/contraction.</p>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">Brent Boom: +$24.30</div><div class="text-gray-500">VLSFO Boom: +$185.84</div></div>
+          <div class="bg-red-50 rounded-lg p-3"><div class="font-bold text-red-700">Brent Crash: −$24.30</div><div class="text-gray-500">VLSFO Crash: −$185.84</div></div>
+        </div>
+        <p class="text-gray-500 text-xs mt-3"><strong>Interpretation:</strong> Demand shocks produce the largest impact. Economic activity is the dominant driver of crude pricing. VLSFO shows significantly higher sensitivity.</p>
+      </div>
+
+      <div class="scenario-card bg-white rounded-2xl shadow-md p-6 border-orange-500">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Geopolitical Shock</span>
+        </div>
+        <h4 class="font-bold text-[#1e2d5e] mb-2">B. Geopolitical Shock (+30% GeoRisk)</h4>
+        <p class="text-gray-600 text-sm mb-3">Simulates increased global uncertainty from conflict or supply disruptions.</p>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">Brent: +$7.19</div></div>
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">VLSFO: +$46.48</div></div>
+        </div>
+        <p class="text-gray-500 text-xs mt-3"><strong>Interpretation:</strong> Moderate impact compared to demand shocks. VLSFO shows stronger response, indicating higher sensitivity to disruptions in global trade and fuel supply chains.</p>
+      </div>
+
+      <div class="scenario-card bg-white rounded-2xl shadow-md p-6 border-blue-500">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="bg-blue-100 text-blue-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Freight Shock</span>
+        </div>
+        <h4 class="font-bold text-[#1e2d5e] mb-2">C. Freight Shock (+25% BDI)</h4>
+        <p class="text-gray-600 text-sm mb-3">Models an increase in shipping costs representing tighter freight capacity.</p>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">Brent: +$1.92</div></div>
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">VLSFO: +$9.18</div></div>
+        </div>
+        <p class="text-gray-500 text-xs mt-3"><strong>Interpretation:</strong> Smallest individual impact, but highly relevant from a supply chain perspective. VLSFO again shows stronger response, highlighting its direct linkage to shipping activity.</p>
+      </div>
+
+      <div class="scenario-card bg-white rounded-2xl shadow-md p-6 border-yellow-500">
+        <div class="flex items-center gap-3 mb-3">
+          <span class="bg-yellow-100 text-yellow-700 text-xs font-bold px-3 py-1 rounded-full uppercase">Demand-Freight Mismatch</span>
+        </div>
+        <h4 class="font-bold text-[#1e2d5e] mb-2">E. Demand-Freight Mismatch (+15% Demand, +25% BDI)</h4>
+        <p class="text-gray-600 text-sm mb-3">Strong demand coincides with constrained freight capacity — port congestion scenario.</p>
+        <div class="grid grid-cols-2 gap-3 text-sm">
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">Brent: +$26.22</div></div>
+          <div class="bg-green-50 rounded-lg p-3"><div class="font-bold text-green-700">VLSFO: +$195.02</div></div>
+        </div>
+        <p class="text-gray-500 text-xs mt-3"><strong>Interpretation:</strong> <strong>Highest price increase across all scenarios.</strong> When strong demand coincides with limited logistics capacity, price pressures are significantly amplified.</p>
+      </div>
+    </div>
+
+    <div class="mt-8 bg-[#1e2d5e] text-white rounded-2xl p-6">
+      <h3 class="font-bold text-base mb-4">4.3 Key Scenario Insights</h3>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-blue-100">
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p><strong class="text-white">Demand dominates.</strong> Even in the combined crisis (geo + freight + demand crash), the negative demand shock overrides all upward pressures.</p></div>
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p><strong class="text-white">VLSFO is more volatile.</strong> Across all scenarios, VLSFO exhibits significantly larger responses — up to 7× the Brent impact in demand scenarios.</p></div>
+        <div class="flex gap-3"><span class="text-yellow-300 flex-shrink-0">▸</span><p><strong class="text-white">Interaction amplifies risk.</strong> The demand-freight mismatch (highest impact scenario) highlights how driver interactions can amplify price movements beyond individual shocks.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     FINAL TAKEAWAYS
+══════════════════════════════════ -->
+<section class="py-16 px-6 bg-white">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-12">
+      <span class="section-label">5. Final Takeaways</span>
+      <h2 class="text-3xl font-extrabold text-[#1e2d5e] mb-3">Implications for Supply Chain Decision-Making</h2>
+      <p class="text-gray-500 text-lg max-w-2xl mx-auto">
+        This study demonstrates that crude pricing is driven by a combination of demand, supply, and risk factors,
+        with demand playing the most dominant role.
+      </p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-[#1e2d5e]">
+        <div class="w-10 h-10 rounded-full bg-[#1e2d5e] text-white flex items-center justify-center font-extrabold text-base mb-4">1</div>
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-2">Trend-Driven Pricing</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          Time-series models confirm price movements are primarily trend-driven. Holt Trend for Brent and
+          Moving Average for VLSFO provide the best short-term accuracy. Seasonal models consistently underperform.
+        </p>
+      </div>
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-red-600">
+        <div class="w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center font-extrabold text-base mb-4">2</div>
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-2">Market-Specific Sensitivities</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          Brent reflects broader macro-financial conditions (USD Index, VIX). VLSFO is more sensitive
+          to physical market dynamics — demand and freight. These structural differences matter for
+          hedging and procurement strategy.
+        </p>
+      </div>
+      <div class="card-hover bg-gray-50 rounded-2xl p-6 border-t-4 border-[#2563eb]">
+        <div class="w-10 h-10 rounded-full bg-[#2563eb] text-white flex items-center justify-center font-extrabold text-base mb-4">3</div>
+        <h3 class="font-bold text-[#1e2d5e] text-base mb-2">Scenario Planning Value</h3>
+        <p class="text-gray-600 text-sm leading-relaxed">
+          Scenario analysis reveals that demand-freight mismatches generate the greatest price pressure.
+          Monitoring industrial production and geopolitical risk indices provides early warning signals
+          for supply chain cost management.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════
+     FOOTER
+══════════════════════════════════ -->
+<footer class="bg-[#1e2d5e] text-white py-14 px-6">
+  <div class="max-w-5xl mx-auto">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-8 mb-10">
+      <div class="flex items-center gap-6">
+        <a href="https://fausupplychain.com" target="_blank" rel="noopener noreferrer"><img src="assets/images/FAULogo.png" alt="Florida Atlantic University" class="h-14 w-auto object-contain opacity-90" /></a>
+        <div>
+          <div class="font-bold text-lg">Florida Atlantic University</div>
+          <div class="text-blue-200 text-sm">College of Business · Supply Chain Management</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-6">
+        <a href="https://imigroup.com/" target="_blank" rel="noopener noreferrer"><img src="assets/images/IMI Logo.jpg" alt="International Materials" class="h-10 w-auto object-contain bg-white/90 rounded-lg px-3 py-1" /></a>
+        <div>
+          <div class="font-bold">International Materials, Inc.</div>
+          <div class="text-blue-200 text-sm">Industry Sponsor</div>
+        </div>
+      </div>
+    </div>
+    <div class="border-t border-white/20 pt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-blue-300">
+      <span>2026 FAU / IMI SCM Case Study Competition</span>
+      <div class="flex gap-6">
+        <a href="casestudy.html" class="hover:text-white transition-colors">← Competition Home</a>
+        <a href="forecasting.html" class="hover:text-white transition-colors">Forecasting Dashboard</a>
+        <a href="scenarios.html" class="hover:text-white transition-colors">Scenarios →</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ══════════════════════════════════
+     SCRIPTS
+══════════════════════════════════ -->
+<script>
+  /* Tab switching */
+  function switchTab(id, btn, group) {
+    document.querySelectorAll('[data-group="' + group + '"]').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tab-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  /* Brent chart — approximate historical data */
+  const brentCtx = document.getElementById('brentChart').getContext('2d');
+  new Chart(brentCtx, {
+    type: 'line',
+    data: {
+      labels: ['Jul-18','Jan-19','Jul-19','Jan-20','Jul-20','Jan-21','Jul-21','Jan-22','Jul-22','Jan-23','Jul-23','Jan-24','Jul-24','Jan-25','Jul-25','Jan-26'],
+      datasets: [{
+        label: 'Brent Price (USD/bbl)',
+        data: [73, 60, 63, 65, 40, 56, 75, 86, 105, 82, 78, 77, 83, 76, 70, 63],
+        borderColor: '#2563eb',
+        backgroundColor: 'rgba(37,99,235,0.08)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        y: { title: { display: true, text: 'Price (USD/bbl)' }, min: 20, max: 130 },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+
+  /* VLSFO chart — approximate historical data */
+  const vlsfoCtx = document.getElementById('vlsfoChart').getContext('2d');
+  new Chart(vlsfoCtx, {
+    type: 'line',
+    data: {
+      labels: ['Jul-18','Jan-19','Jul-19','Jan-20','Jul-20','Jan-21','Jul-21','Jan-22','Jul-22','Jan-23','Jul-23','Jan-24','Jul-24','Jan-25','Jul-25','Jan-26'],
+      datasets: [{
+        label: 'VLSFO Price (USD/MT)',
+        data: [540, 490, 510, 460, 290, 400, 520, 600, 730, 530, 510, 520, 540, 500, 460, 400],
+        borderColor: '#0891b2',
+        backgroundColor: 'rgba(8,145,178,0.08)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointHoverRadius: 6
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false }, tooltip: { mode: 'index', intersect: false } },
+      scales: {
+        y: { title: { display: true, text: 'Price (USD/MT)' }, min: 150, max: 870 },
+        x: { grid: { display: false } }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>

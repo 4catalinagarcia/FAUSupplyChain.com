@@ -234,6 +234,52 @@
     'PHOENIX_ALMERIA','PHOENIX_GARRUCHA',
   ];
 
+  // ─── Cost matrix lookup (mirrors optimization.html) ─────────────────────
+  const OPT_COA_LANE = {
+    'EDF-2018_ALMERIA':0,'EDF-2018_GARRUCHA':1,
+    'NORDEN_ALMERIA':2,'NORDEN_GARRUCHA':3,
+    'NORDEN-OPTIONALS_ALMERIA':4,'NORDEN-OPTIONALS_GARRUCHA':5,
+    'PB-2016_ALMERIA':6,'PB-2016_GARRUCHA':7,
+    'PB-2019_ALMERIA':8,'PB-2019_GARRUCHA':9,
+    'PHOENIX_ALMERIA':10,'PHOENIX_GARRUCHA':11,
+  };
+  const OPT_PORT_DEST = {
+    'baltimore-rukert':0,'bristol':1,'buchanan':2,'camden':3,'cementon':4,
+    'charleston-carver':5,'charleston-kmi':6,'charleston-pier-j':7,'coeymans':8,
+    'jacksonville':9,'montreal':10,'newington':11,'norfolk':12,
+    'port-everglades':13,'port-manatee':14,'savannah':15,'searsport':16,'tampa':17,
+  };
+  const FALLBACK_COSTS = [
+    [10.60,12.50,12.95,11.70,14.25,15.45,999,13.05,999,12.00,999,999,999,10.95,999,13.35,11.25,13.55],
+    [10.35,12.25,12.70,11.45,14.00,15.20,999,12.80,999,11.75,999,999,999,10.70,999,13.10,11.00,13.30],
+    [10.60,12.10,12.70,12.25,14.75,999,12.10,11.70,15.85,10.85,13.90,12.50,14.00,10.75,11.95,12.00,11.85,999],
+    [10.60,12.10,12.70,12.25,14.75,999,12.10,11.70,15.85,10.85,13.90,12.50,14.00,10.75,11.95,12.00,11.85,999],
+    [10.60,12.10,12.70,12.25,14.75,999,12.10,11.70,15.85,10.85,13.90,12.50,14.00,10.75,11.95,12.00,11.85,999],
+    [10.60,12.10,12.70,12.25,14.75,999,12.10,11.70,15.85,10.85,13.90,12.50,14.00,10.75,11.95,12.00,11.85,999],
+    [999,999,999,9.29,999,999,999,999,999,999,999,8.42,999,999,999,8.22,999,999],
+    [999,999,999,9.29,999,999,999,999,999,999,999,8.42,999,999,999,8.22,999,999],
+    [999,999,999,9.90,999,999,999,9.78,999,999,999,9.50,999,999,999,8.65,999,999],
+    [999,999,999,9.90,999,999,999,9.78,999,999,999,9.50,999,999,999,8.65,999,999],
+    [999,999,999,9.95,999,999,999,10.40,999,999,12.75,9.50,999,999,999,8.65,999,999],
+    [999,999,999,9.95,999,999,999,10.40,999,999,12.75,9.50,999,999,999,8.65,999,999],
+  ];
+  function loadCostMatrix() {
+    try {
+      const raw = localStorage.getItem('opt_cost_matrix');
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return FALLBACK_COSTS;
+  }
+  function lookupRate(costMatrix, coa, arrivalPortId) {
+    if (!coa || !arrivalPortId) return null;
+    const lane = OPT_COA_LANE[coa];
+    const dest = OPT_PORT_DEST[arrivalPortId];
+    if (lane == null || dest == null) return null;
+    const rate = costMatrix[lane]?.[dest];
+    if (rate == null || rate >= 999) return null;
+    return rate;
+  }
+
   const TACTICAL_COLORS = [
     '#0ea5e9','#f472b6','#a855f7','#22c55e',
     '#f59e0b','#6366f1','#ec4899','#14b8a6',
@@ -514,6 +560,7 @@
     const [newPortLat,        setNewPortLat]          = useState('');
     const [newPortLng,        setNewPortLng]          = useState('');
     const [loadingStatuses,   setLoadingStatuses]     = useState({});
+    const [costMatrix,        setCostMatrix]           = useState(loadCostMatrix);
 
     useEffect(() => { try { localStorage.setItem('tracker_shipments', JSON.stringify(shipments)); } catch {} }, [shipments]);
     useEffect(() => { try { localStorage.setItem('tracker_arrival_ports', JSON.stringify(arrivalPorts)); } catch {} }, [arrivalPorts]);
@@ -959,8 +1006,22 @@
                                 : shipment.status}
                             </button>
                           </td>
-                          <td className="px-5 py-4 text-xs text-gray-400 font-mono italic">
-                            <Ico name="DollarSign" size={10} className="inline mr-0.5" />—
+                          <td className="px-5 py-4 text-xs font-mono">
+                            {(() => {
+                              const rate = lookupRate(costMatrix, shipment.coa, shipment.arrivalPort);
+                              if (rate == null) return <span className="text-gray-400 italic"><Ico name="DollarSign" size={10} className="inline mr-0.5" />—</span>;
+                              const total = shipment.cargoWeight ? rate * shipment.cargoWeight : null;
+                              return (
+                                <div>
+                                  <div className="font-bold text-[#1e2d5e]">${rate.toFixed(2)}<span className="text-gray-400 font-normal">/MT</span></div>
+                                  {total != null && (
+                                    <div className="text-[10px] text-gray-500 mt-0.5">
+                                      {'$' + total.toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:0})} total
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="px-5 py-4 text-right">
                             <button onClick={() => handleDeleteShipment(shipment.id)}

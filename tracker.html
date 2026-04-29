@@ -493,8 +493,14 @@
 
   // ─── Main App ─────────────────────────────────────────────────────────────
   function App() {
-    const [shipments,    setShipments]    = useState([]);
-    const [arrivalPorts, setArrivalPorts] = useState(INITIAL_ARRIVAL_PORTS);
+    const [shipments,    setShipments]    = useState(() => {
+      try { const s = localStorage.getItem('tracker_shipments'); return s ? JSON.parse(s) : []; }
+      catch { return []; }
+    });
+    const [arrivalPorts, setArrivalPorts] = useState(() => {
+      try { const p = localStorage.getItem('tracker_arrival_ports'); return p ? JSON.parse(p) : INITIAL_ARRIVAL_PORTS; }
+      catch { return INITIAL_ARRIVAL_PORTS; }
+    });
     const [startDate,         setStartDate]         = useState(dfFormat(new Date(), 'yyyy-MM-dd'));
     const [selectedDeparture, setSelectedDeparture] = useState('');
     const [selectedArrival,   setSelectedArrival]   = useState('');
@@ -508,6 +514,9 @@
     const [newPortLat,        setNewPortLat]          = useState('');
     const [newPortLng,        setNewPortLng]          = useState('');
     const [loadingStatuses,   setLoadingStatuses]     = useState({});
+
+    useEffect(() => { try { localStorage.setItem('tracker_shipments', JSON.stringify(shipments)); } catch {} }, [shipments]);
+    useEffect(() => { try { localStorage.setItem('tracker_arrival_ports', JSON.stringify(arrivalPorts)); } catch {} }, [arrivalPorts]);
 
     const isSlowdownDay = useMemo(() => {
       if (!startDate) return false;
